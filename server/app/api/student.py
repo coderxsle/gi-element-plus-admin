@@ -80,7 +80,10 @@ def add_student(
     db: Session = Depends(get_db),
     current_user = Depends(require_admin)
 ):
-    student = create_student(db, data)
+    try:
+        student = create_student(db, data)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     return {
         "code": 200,
         "message": "添加成功",
@@ -104,7 +107,10 @@ def edit_student(
     db: Session = Depends(get_db),
     current_user = Depends(require_admin)
 ):
-    student = update_student(db, student_id, data)
+    try:
+        student = update_student(db, student_id, data)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     if not student:
         raise HTTPException(status_code=404, detail="学生不存在")
     return {

@@ -55,7 +55,7 @@ export default defineConfig(({ mode }) => {
             vue: ['useTemplateRef', 'onWatcherCleanup', 'useId'],
           },
         ],
-        dirs: ['src/stores', 'src/utils'],
+        dirs: ['src/stores', 'src/utils', 'src/hooks'],
         dts: 'src/auto-import.d.ts',
         resolvers: [ElementPlusResolver()],
       }),

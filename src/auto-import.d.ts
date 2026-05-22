@@ -199,7 +199,7 @@ declare global {
   const useFocus: typeof import('@vueuse/core').useFocus
   const useFocusWithin: typeof import('@vueuse/core').useFocusWithin
   const useFps: typeof import('@vueuse/core').useFps
-  const useFullscreen: typeof import('@vueuse/core').useFullscreen
+  const useFullscreen: typeof import('./hooks/useFullscreen').useFullscreen
   const useGamepad: typeof import('@vueuse/core').useGamepad
   const useGeolocation: typeof import('@vueuse/core').useGeolocation
   const useId: typeof import('vue').useId
@@ -235,7 +235,7 @@ declare global {
   const useParallax: typeof import('@vueuse/core').useParallax
   const useParentElement: typeof import('@vueuse/core').useParentElement
   const usePerformanceObserver: typeof import('@vueuse/core').usePerformanceObserver
-  const usePermission: typeof import('@vueuse/core').usePermission
+  const usePermission: typeof import('./hooks/usePermission').usePermission
   const usePointer: typeof import('@vueuse/core').usePointer
   const usePointerLock: typeof import('@vueuse/core').usePointerLock
   const usePointerSwipe: typeof import('@vueuse/core').usePointerSwipe
@@ -269,6 +269,7 @@ declare global {
   const useStyleTag: typeof import('@vueuse/core').useStyleTag
   const useSupported: typeof import('@vueuse/core').useSupported
   const useSwipe: typeof import('@vueuse/core').useSwipe
+  const useTable: typeof import('./hooks/useTable').useTable
   const useTemplateRef: typeof import('vue').useTemplateRef
   const useTemplateRefsList: typeof import('@vueuse/core').useTemplateRefsList
   const useTextDirection: typeof import('@vueuse/core').useTextDirection
@@ -327,4 +328,7 @@ declare global {
   // @ts-ignore
   export type { TreeNode } from './utils/tree'
   import('./utils/tree')
+  // @ts-ignore
+  export type { UseTablePaginationParams, UseTableOptions, UseTableApi } from './hooks/useTable'
+  import('./hooks/useTable')
 }

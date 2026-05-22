@@ -1,8 +1,19 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from app.models.models import Student
 from app.schemas.schemas import StudentCreate, StudentUpdate
-from typing import Optional
+from typing import Any, Optional
+
+
+def _empty_to_none(value: Any) -> Any:
+    """空字符串转为 None，避免唯一索引对 '' 重复报错"""
+    if isinstance(value, str) and not value.strip():
+        return None
+    return value
+
+
+def _sanitize_student_data(data: dict) -> dict:
+    return {key: _empty_to_none(value) for key, value in data.items()}
 
 
 def get_student(db: Session, student_id: int):
@@ -23,9 +34,17 @@ def get_students(db: Session, page: int = 1, page_size: int = 10, name: Optional
 
 
 def create_student(db: Session, student: StudentCreate):
-    db_student = Student(**student.model_dump())
+    data = _sanitize_student_data(student.model_dump())
+    student_no = data.get("student_no")
+    if student_no and get_student_by_no(db, student_no):
+        raise ValueError("学号已存在")
+    db_student = Student(**data)
     db.add(db_student)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ValueError("学号已存在") from None
     db.refresh(db_student)
     return db_student
 
@@ -34,9 +53,19 @@ def update_student(db: Session, student_id: int, student: StudentUpdate):
     db_student = get_student(db, student_id)
     if not db_student:
         return None
-    for key, value in student.model_dump(exclude_unset=True).items():
+    data = _sanitize_student_data(student.model_dump(exclude_unset=True))
+    student_no = data.get("student_no")
+    if student_no:
+        existing = get_student_by_no(db, student_no)
+        if existing and existing.id != student_id:
+            raise ValueError("学号已存在")
+    for key, value in data.items():
         setattr(db_student, key, value)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ValueError("学号已存在") from None
     db.refresh(db_student)
     return db_student
 

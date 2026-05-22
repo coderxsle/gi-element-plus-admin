@@ -41,7 +41,11 @@ service.interceptors.response.use(
     return Promise.reject(new Error(res.message || '请求失败'))
   },
   (error) => {
-    const message = error.response?.data?.message || error.message || '网络异常'
+    const detail = error.response?.data?.detail
+    const message = error.response?.data?.message
+      || (typeof detail === 'string' ? detail : Array.isArray(detail) ? detail[0]?.msg : undefined)
+      || error.message
+      || '网络异常'
     return Promise.reject(new Error(message))
   },
 )

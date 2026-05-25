@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { Close, Refresh } from '@element-plus/icons-vue'
 import { GiTabs } from 'gi-component'
-import { Refresh, Close } from '@element-plus/icons-vue'
 import { useTabsStore } from '@/stores/modules/tabs'
 
 const router = useRouter()
@@ -31,6 +31,7 @@ function handleClose(path: string, e: Event) {
     :model-value="tabsStore.activeTab"
     :options="tabsOptions"
     type="card"
+    size="small"
     @tab-change="handleTabClick"
   >
     <template #label="{ data }">

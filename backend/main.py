@@ -1,34 +1,109 @@
+import asyncio
+import os
+from typing import Annotated
+
+import typer
+import uvicorn
+from alembic import command
+from alembic.config import Config
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
-from app.api import auth, student, menu
-from app.core.database import Base, engine
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
-    yield
+from app.common.enums import EnvironmentEnum
 
-app = FastAPI(title="学生信息管理系统", version="1.0.0", lifespan=lifespan)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-app.include_router(auth.router, prefix="/api")
-app.include_router(student.router, prefix="/api")
-app.include_router(menu.router, prefix="/api")
+cli = typer.Typer()
+alembic_cfg = Config("alembic.ini")
 
 
-@app.get("/")
-def root():
-    return {"message": "gi-admin API"}
+def prepare_environment(env: EnvironmentEnum) -> None:
+    os.environ["ENVIRONMENT"] = env.value
+    from app.config.setting import get_settings
+
+    get_settings.cache_clear()
 
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+def create_app() -> FastAPI:
+    from app.config.setting import settings
+    from app.core.logger import setup_logging
+    from app.scripts.init_app import (
+        lifespan,
+        register_exceptions,
+        register_files,
+        register_middlewares,
+        register_routers,
+    )
+
+    setup_logging(settings.LOGGER_LEVEL)
+    app = FastAPI(**settings.FASTAPI_CONFIG, lifespan=lifespan)
+    register_exceptions(app)
+    register_middlewares(app)
+    register_routers(app)
+    register_files(app)
+    return app
+
+
+@cli.command(name="run")
+def run(
+    env: Annotated[
+        EnvironmentEnum,
+        typer.Option("--env", help="运行环境(dev/test/prod)"),
+    ] = EnvironmentEnum.DEV,
+) -> None:
+    prepare_environment(env)
+    from app.config.setting import get_settings
+    from app.core.logger import setup_logging
+    from app.utils.banner import print_banner
+
+    settings = get_settings()
+    setup_logging(settings.LOGGER_LEVEL)
+    print_banner(env.value)
+    uvicorn.run(
+        "main:create_app",
+        host=settings.SERVER_HOST,
+        port=settings.SERVER_PORT,
+        reload=env == EnvironmentEnum.DEV,
+        factory=True,
+    )
+
+
+@cli.command(name="revision")
+def revision(
+    env: Annotated[
+        EnvironmentEnum,
+        typer.Option("--env", help="运行环境(dev/test/prod)"),
+    ] = EnvironmentEnum.DEV,
+) -> None:
+    prepare_environment(env)
+    from app.scripts.initialize import ensure_database_exists
+
+    ensure_database_exists()
+    command.revision(alembic_cfg, autogenerate=True, message="迁移脚本")
+
+
+@cli.command(name="upgrade")
+def upgrade(
+    env: Annotated[
+        EnvironmentEnum,
+        typer.Option("--env", help="运行环境(dev/test/prod)"),
+    ] = EnvironmentEnum.DEV,
+) -> None:
+    prepare_environment(env)
+    from app.scripts.initialize import run_alembic_upgrade
+
+    asyncio.run(run_alembic_upgrade())
+
+
+@cli.command(name="init-data")
+def init_data(
+    env: Annotated[
+        EnvironmentEnum,
+        typer.Option("--env", help="运行环境(dev/test/prod)"),
+    ] = EnvironmentEnum.DEV,
+) -> None:
+    prepare_environment(env)
+    from app.scripts.initialize import InitializeData
+
+    asyncio.run(InitializeData().init_data())
+
+
+if __name__ == "__main__":
+    cli()
